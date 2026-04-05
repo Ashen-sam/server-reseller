@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/User';
-import { signToken, cookieName, cookieOptions } from '../utils/jwt';
+import { signToken, cookieName, cookieOptions, cookieClearOptions } from '../utils/jwt';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { limitsPayload, publicUserFields } from '../utils/serializeUser';
 
@@ -78,7 +78,7 @@ router.post('/login', async (req, res: Response) => {
 });
 
 router.post('/logout', (_req, res: Response) => {
-  res.clearCookie(cookieName(), { path: '/' });
+  res.clearCookie(cookieName(), cookieClearOptions());
   res.json({ ok: true });
 });
 

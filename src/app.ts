@@ -9,12 +9,21 @@ import metaRoutes from './routes/meta';
 
 const app = express();
 
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+/** Comma-separated list, e.g. http://localhost:5173,https://app.example.com */
+function corsOrigins(): string | string[] {
+  const raw = process.env.CLIENT_URL || 'http://localhost:5173';
+  const list = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return list.length === 1 ? list[0] : list;
+}
 
 app.use(
   cors({
-    origin: clientUrl,
+    origin: corsOrigins(),
     credentials: true,
+    maxAge: 86400,
   })
 );
 app.use(cookieParser());

@@ -29,14 +29,33 @@ export function cookieName(): string {
   return COOKIE_NAME;
 }
 
+/** True when the SPA is on a different site than this API (e.g. Vercel + Render). Required for auth cookies on cross-origin fetch. */
+function crossSiteCookies(): boolean {
+  return process.env.CROSS_SITE_COOKIES === 'true' || process.env.CROSS_SITE_COOKIES === '1';
+}
+
 export function cookieOptions() {
   const isProd = process.env.NODE_ENV === 'production';
+  const crossSite = crossSiteCookies();
+  const sameSite = crossSite ? ('none' as const) : ('lax' as const);
+  const secure = crossSite || isProd;
   return {
     httpOnly: true,
-    secure: isProd,
-    sameSite: 'lax' as const,
+    secure,
+    sameSite,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
+  };
+}
+
+/** Match set options so browsers actually remove the cookie on logout. */
+export function cookieClearOptions() {
+  const o = cookieOptions();
+  return {
+    path: o.path,
+    sameSite: o.sameSite,
+    secure: o.secure,
+    httpOnly: o.httpOnly,
   };
 }
 
