@@ -29,9 +29,16 @@ export function cookieName(): string {
   return COOKIE_NAME;
 }
 
-/** True when the SPA is on a different site than this API (e.g. Vercel + Render). Required for auth cookies on cross-origin fetch. */
+/**
+ * SameSite=None; Secure for cross-origin cookie fallback (Vercel + Render).
+ * Defaults to on in production unless CROSS_SITE_COOKIES=0|false.
+ * Bearer token in Authorization header is the primary cross-origin auth.
+ */
 function crossSiteCookies(): boolean {
-  return process.env.CROSS_SITE_COOKIES === 'true' || process.env.CROSS_SITE_COOKIES === '1';
+  const v = process.env.CROSS_SITE_COOKIES;
+  if (v === 'false' || v === '0') return false;
+  if (v === 'true' || v === '1') return true;
+  return process.env.NODE_ENV === 'production';
 }
 
 export function cookieOptions() {

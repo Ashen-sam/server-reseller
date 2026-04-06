@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken, cookieName } from '../utils/jwt';
+import { verifyToken } from '../utils/jwt';
+import { getTokenFromRequest } from '../utils/authRequest';
 import { User, IUser } from '../models/User';
 
 export interface AuthRequest extends Request {
@@ -8,7 +9,7 @@ export interface AuthRequest extends Request {
 }
 
 export async function optionalAuth(req: AuthRequest, _res: Response, next: NextFunction) {
-  const token = req.cookies?.[cookieName()];
+  const token = getTokenFromRequest(req);
   if (!token) return next();
   try {
     const payload = verifyToken(token);
@@ -24,7 +25,7 @@ export async function optionalAuth(req: AuthRequest, _res: Response, next: NextF
 }
 
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
-  const token = req.cookies?.[cookieName()];
+  const token = getTokenFromRequest(req);
   if (!token) {
     res.status(401).json({ message: 'Not authenticated' });
     return;

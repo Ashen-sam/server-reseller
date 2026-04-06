@@ -44,6 +44,7 @@ router.post('/register', async (req, res: Response) => {
     const token = signToken(user.id, user.role);
     res.cookie(cookieName(), token, cookieOptions());
     res.status(201).json({
+      token,
       user: publicUserFields(user),
       limits: limitsPayload(user),
     });
@@ -68,6 +69,7 @@ router.post('/login', async (req, res: Response) => {
     const token = signToken(user.id, user.role);
     res.cookie(cookieName(), token, cookieOptions());
     res.json({
+      token,
       user: publicUserFields(user),
       limits: limitsPayload(user),
     });

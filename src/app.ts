@@ -11,13 +11,17 @@ const app = express();
 
 const VERCEL_PREVIEW_RE = /^https:\/\/client-reseller-[a-z0-9-]+\.vercel\.app$/;
 
+const DEFAULT_CORS_ORIGINS = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://client-reseller.vercel.app",
+];
+
 function isAllowedOrigin(origin: string): boolean {
-  // Explicit origins from CLIENT_URL env var
-  const raw = process.env.CLIENT_URL || "http://localhost:5173";
+  const raw = process.env.CLIENT_URL?.trim();
   const explicit = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+    ? raw.split(",").map((s) => s.trim()).filter(Boolean)
+    : DEFAULT_CORS_ORIGINS;
   if (explicit.includes(origin)) return true;
 
   // Allow all Vercel preview deployments for this project
@@ -31,13 +35,18 @@ function isAllowedOrigin(origin: string): boolean {
 
 app.use(
   cors({
+    // With credentials: true, Allow-Origin must be the request origin string — never "*".
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Render health checks)
-      if (!origin) return callback(null, true);
-      if (isAllowedOrigin(origin)) return callback(null, true);
+      if (!origin) {
+        return callback(null, false);
+      }
+      if (isAllowedOrigin(origin)) {
+        return callback(null, origin);
+      }
       callback(new Error(`CORS: origin not allowed — ${origin}`));
     },
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400,
   }),
 );
