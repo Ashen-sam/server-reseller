@@ -1,4 +1,6 @@
 import express from "express";
+import type { Request, Response, NextFunction } from "express";
+import multer from "multer";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "path";
@@ -66,6 +68,19 @@ app.use("/api", metaRoutes);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    const message =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "Each image must be 5MB or smaller."
+        : err.message;
+    res.status(400).json({ message });
+    return;
+  }
+  console.error("[express]", err);
+  res.status(500).json({ message: "Internal server error" });
 });
 
 export default app;

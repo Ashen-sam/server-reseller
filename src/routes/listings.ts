@@ -19,22 +19,10 @@ function paramId(req: { params: { id?: string | string[] } }): string {
 const useCloudinary = isCloudinaryEnabled();
 
 const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!useCloudinary && !fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
 
-const storage = useCloudinary
-  ? multer.memoryStorage()
-  : multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, uploadsDir),
-      filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname) || '.jpg';
-        cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-      },
-    });
-
+/** Always memory storage so `buffer` is set; avoids multer disk issues on some hosts (e.g. Render). */
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { files: 10, fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ok = /^image\/(jpeg|png|gif|webp)$/i.test(file.mimetype);
@@ -46,12 +34,38 @@ function publicImageUrl(filename: string): string {
   return `/uploads/${filename}`;
 }
 
+async function saveBufferToUploads(buffer: Buffer, originalName: string): Promise<string> {
+  await fs.promises.mkdir(uploadsDir, { recursive: true });
+  const ext = path.extname(originalName) || '.jpg';
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+  await fs.promises.writeFile(path.join(uploadsDir, filename), buffer);
+  return publicImageUrl(filename);
+}
+
+function serializeCaughtError(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return String(e);
+  }
+}
+
 async function imageUrlsFromFiles(files: Express.Multer.File[] | undefined): Promise<string[]> {
   if (!files?.length) return [];
-  if (useCloudinary) {
-    return Promise.all(files.map((f) => uploadImageBuffer(f.buffer, f.mimetype)));
-  }
-  return files.map((f) => publicImageUrl(f.filename));
+  return Promise.all(
+    files.map(async (f) => {
+      const buf = f.buffer;
+      if (!buf?.length) {
+        throw new Error('Received empty image file; try a smaller image or another format.');
+      }
+      if (useCloudinary) {
+        return uploadImageBuffer(buf, f.mimetype);
+      }
+      return saveBufferToUploads(buf, f.originalname || 'image');
+    }),
+  );
 }
 
 router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
@@ -314,8 +328,12 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
       },
     });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: 'Failed to create listing' });
+    console.error('[listings] POST /', e);
+    const msg = serializeCaughtError(e);
+    res.status(500).json({
+      message: 'Failed to create listing',
+      ...(msg ? { detail: msg.slice(0, 500) } : {}),
+    });
   }
 });
 
