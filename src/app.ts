@@ -8,6 +8,8 @@ import billingRoutes from "./routes/billing";
 import metaRoutes from "./routes/meta";
 
 const app = express();
+// Correct client IP / secure cookies when behind Render / Cloudflare
+app.set("trust proxy", 1);
 
 const VERCEL_PREVIEW_RE = /^https:\/\/client-reseller-[a-z0-9-]+\.vercel\.app$/;
 
