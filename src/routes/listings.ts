@@ -7,6 +7,7 @@ import { User } from '../models/User';
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 import { maxImagesPerListingForUser } from '../utils/listingLimits';
 import { Types } from 'mongoose';
+import { isCloudinaryEnabled, uploadImageBuffer } from '../config/cloudinary';
 
 const router = Router();
 
@@ -15,18 +16,22 @@ function paramId(req: { params: { id?: string | string[] } }): string {
   return Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '');
 }
 
+const useCloudinary = isCloudinaryEnabled();
+
 const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
+if (!useCloudinary && !fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-  },
-});
+const storage = useCloudinary
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, uploadsDir),
+      filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname) || '.jpg';
+        cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+      },
+    });
 
 const upload = multer({
   storage,
@@ -39,6 +44,14 @@ const upload = multer({
 
 function publicImageUrl(filename: string): string {
   return `/uploads/${filename}`;
+}
+
+async function imageUrlsFromFiles(files: Express.Multer.File[] | undefined): Promise<string[]> {
+  if (!files?.length) return [];
+  if (useCloudinary) {
+    return Promise.all(files.map((f) => uploadImageBuffer(f.buffer, f.mimetype)));
+  }
+  return files.map((f) => publicImageUrl(f.filename));
 }
 
 router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
@@ -270,7 +283,7 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
       featured = true;
     }
 
-    const images = (files || []).map((f) => publicImageUrl(f.filename));
+    const images = await imageUrlsFromFiles(files);
 
     const listing = await Listing.create({
       title: title.trim(),
@@ -376,7 +389,7 @@ router.put(
           });
           return;
         }
-        const newUrls = files.map((f) => publicImageUrl(f.filename));
+        const newUrls = await imageUrlsFromFiles(files);
         listing.images = [...existing, ...newUrls];
       } else if (keepImages !== undefined) {
         try {

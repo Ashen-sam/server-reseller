@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+import { configureCloudinary } from "./config/cloudinary";
 
 const root = process.cwd();
 const envPath = path.join(root, ".env");
@@ -23,3 +24,5 @@ if (fs.existsSync(envPath)) {
 } else {
   dotenv.config();
 }
+
+configureCloudinary();
