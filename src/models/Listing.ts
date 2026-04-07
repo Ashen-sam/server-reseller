@@ -67,6 +67,8 @@ listingSchema.index({ category: 1, price: 1 });
 listingSchema.index({ createdAt: -1 });
 listingSchema.index({ views: -1 });
 listingSchema.index({ featured: -1, createdAt: -1 });
+listingSchema.index({ seller: 1, createdAt: -1 });
+listingSchema.index({ seller: 1 });
 
 export const Listing: Model<IListing> =
   mongoose.models.Listing || mongoose.model<IListing>('Listing', listingSchema);

@@ -107,6 +107,8 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
       Listing.countDocuments(filter),
     ]);
 
+    // Small shared-cache TTL helps initial page load under traffic bursts.
+    res.set('Cache-Control', 'public, max-age=20, s-maxage=30, stale-while-revalidate=60');
     res.json({
       listings: items.map((l) => ({
         ...l,
@@ -148,10 +150,27 @@ router.get('/mine', requireAuth, async (req: AuthRequest, res: Response) => {
 
 router.get('/dashboard-stats', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const mine = await Listing.find({ seller: req.userId }).lean();
-    const listingCount = mine.length;
-    const totalViews = mine.reduce((s, l) => s + (l.views || 0), 0);
-    const totalContactClicks = mine.reduce((s, l) => s + (l.contactClicks || 0), 0);
+    // Aggregate in MongoDB to avoid loading all rows into Node memory.
+    const rows = await Listing.aggregate<{
+      _id: null;
+      listingCount: number;
+      totalViews: number;
+      totalContactClicks: number;
+    }>([
+      { $match: { seller: new Types.ObjectId(req.userId) } },
+      {
+        $group: {
+          _id: null,
+          listingCount: { $sum: 1 },
+          totalViews: { $sum: { $ifNull: ['$views', 0] } },
+          totalContactClicks: { $sum: { $ifNull: ['$contactClicks', 0] } },
+        },
+      },
+    ]);
+    const row = rows[0];
+    const listingCount = row?.listingCount ?? 0;
+    const totalViews = row?.totalViews ?? 0;
+    const totalContactClicks = row?.totalContactClicks ?? 0;
     res.json({ listingCount, totalViews, totalContactClicks });
   } catch (e) {
     console.error(e);
@@ -172,6 +191,7 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
       return;
     }
     const seller = listing.seller as { _id: Types.ObjectId; name?: string; email?: string } | null;
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=180');
     res.json({
       listing: {
         ...listing,
