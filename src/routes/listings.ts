@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { Listing, LISTING_CATEGORIES, LISTING_CURRENCIES } from '../models/Listing';
+import { Listing, LISTING_CATEGORIES, LISTING_CURRENCIES, LISTING_TYPES } from '../models/Listing';
 import { User } from '../models/User';
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 import { maxImagesPerListingForUser } from '../utils/listingLimits';
@@ -72,6 +72,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const {
       category,
+      type,
       minPrice,
       maxPrice,
       sort = 'latest',
@@ -82,6 +83,12 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
     const filter: Record<string, unknown> = {};
     if (category && LISTING_CATEGORIES.includes(category as (typeof LISTING_CATEGORIES)[number])) {
       filter.category = category;
+    }
+    if (type && LISTING_TYPES.includes(type as (typeof LISTING_TYPES)[number])) {
+      filter.type =
+        type === 'product'
+          ? { $in: ['product', null] }
+          : type;
     }
     if (minPrice !== undefined && minPrice !== '') {
       filter.price = { ...(filter.price as object), $gte: Number(minPrice) };
@@ -262,6 +269,7 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
       description,
       price,
       category,
+      type: typeRaw,
       currency: currencyRaw,
       phone,
       whatsapp,
@@ -274,6 +282,11 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
     }
     if (!LISTING_CATEGORIES.includes(category as (typeof LISTING_CATEGORIES)[number])) {
       res.status(400).json({ message: 'Invalid category' });
+      return;
+    }
+    const listingType = (typeRaw || 'product').toLowerCase();
+    if (!LISTING_TYPES.includes(listingType as (typeof LISTING_TYPES)[number])) {
+      res.status(400).json({ message: 'Invalid listing type' });
       return;
     }
     const currency = (currencyRaw || 'USD').toUpperCase();
@@ -324,6 +337,7 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
       description: description.trim(),
       price: priceNum,
       currency: currency as (typeof LISTING_CURRENCIES)[number],
+      type: listingType as (typeof LISTING_TYPES)[number],
       category,
       featured,
       images,
@@ -381,7 +395,7 @@ router.put(
       const dbUser = await User.findById(req.userId);
       const maxImg = maxImagesPerListingForUser(dbUser);
 
-      const { title, description, price, category, currency: currencyRaw, phone, whatsapp, email, keepImages } =
+      const { title, description, price, type: typeRaw, category, currency: currencyRaw, phone, whatsapp, email, keepImages } =
         req.body as Record<string, string>;
       if (title !== undefined) listing.title = title.trim();
       if (description !== undefined) listing.description = description.trim();
@@ -399,6 +413,14 @@ router.put(
           return;
         }
         listing.category = category as (typeof LISTING_CATEGORIES)[number];
+      }
+      if (typeRaw !== undefined) {
+        const t = typeRaw.toLowerCase();
+        if (!LISTING_TYPES.includes(t as (typeof LISTING_TYPES)[number])) {
+          res.status(400).json({ message: 'Invalid listing type' });
+          return;
+        }
+        listing.type = t as (typeof LISTING_TYPES)[number];
       }
       if (currencyRaw !== undefined) {
         const c = currencyRaw.toUpperCase();

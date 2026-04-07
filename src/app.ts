@@ -1,5 +1,6 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
+import { clerkMiddleware } from "@clerk/express";
 import multer from "multer";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -66,6 +67,7 @@ app.use(
 app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
+app.use(clerkMiddleware());
 
 const uploadsPath = path.join(process.cwd(), "uploads");
 app.use("/uploads", express.static(uploadsPath));

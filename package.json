@@ -8,6 +8,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@clerk/backend": "^3.2.7",
+    "@clerk/express": "^2.0.11",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.9.0",
     "compression": "^1.8.1",
@@ -16,10 +18,12 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^8.3.2",
+    "google-auth-library": "^10.6.2",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^8.0.4"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../utils/jwt';
-import { getTokenFromRequest } from '../utils/authRequest';
+import { getAuth } from '@clerk/express';
 import { User, IUser } from '../models/User';
+import { ensureMongoUserFromClerk } from '../utils/clerkSync';
 
 export interface AuthRequest extends Request {
   user?: IUser;
@@ -9,11 +9,13 @@ export interface AuthRequest extends Request {
 }
 
 export async function optionalAuth(req: AuthRequest, _res: Response, next: NextFunction) {
-  const token = getTokenFromRequest(req);
-  if (!token) return next();
+  const auth = getAuth(req);
+  const clerkUserId = auth.userId || null;
+  if (!clerkUserId) return next();
   try {
-    const payload = verifyToken(token);
-    const user = await User.findById(payload.sub).select('-passwordHash');
+    const user =
+      (await User.findOne({ clerkUserId }).select('-passwordHash')) ||
+      (await ensureMongoUserFromClerk(clerkUserId));
     if (user) {
       req.user = user;
       req.userId = user.id;
@@ -25,14 +27,16 @@ export async function optionalAuth(req: AuthRequest, _res: Response, next: NextF
 }
 
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
-  const token = getTokenFromRequest(req);
-  if (!token) {
+  const auth = getAuth(req);
+  const clerkUserId = auth.userId || null;
+  if (!clerkUserId) {
     res.status(401).json({ message: 'Not authenticated' });
     return;
   }
   try {
-    const payload = verifyToken(token);
-    const user = await User.findById(payload.sub).select('-passwordHash');
+    const user =
+      (await User.findOne({ clerkUserId }).select('-passwordHash')) ||
+      (await ensureMongoUserFromClerk(clerkUserId));
     if (!user) {
       res.status(401).json({ message: 'User not found' });
       return;
