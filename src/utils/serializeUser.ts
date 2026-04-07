@@ -13,8 +13,6 @@ export function publicUserFields(user: IUser) {
     email: user.email,
     name: user.name,
     role: user.role,
-    emailVerified: Boolean(user.emailVerified),
-    authProvider: user.authProvider ?? 'local',
     listingImagePackPurchased: Boolean(user.listingImagePackPurchased),
     featuredTokens: user.featuredTokens ?? 0,
   };
