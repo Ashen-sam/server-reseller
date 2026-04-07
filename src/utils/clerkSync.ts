@@ -23,7 +23,12 @@ export async function ensureMongoUserFromClerk(clerkUserId: string): Promise<IUs
   let local = await User.findOne({ clerkUserId });
   if (local) return local;
 
-  const user = await clerkClient().users.getUser(clerkUserId);
+  let user;
+  try {
+    user = await clerkClient().users.getUser(clerkUserId);
+  } catch {
+    return null;
+  }
   const primary = user.primaryEmailAddressId
     ? user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)
     : user.emailAddresses[0];

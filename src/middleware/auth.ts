@@ -42,7 +42,7 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
       (await User.findOne({ clerkUserId }).select('-passwordHash')) ||
       (await ensureMongoUserFromClerk(clerkUserId));
     if (!user) {
-      res.status(401).json({ message: 'User not found' });
+      res.status(401).json({ message: 'User not found in Clerk/Mongo sync' });
       return;
     }
     req.user = user;
