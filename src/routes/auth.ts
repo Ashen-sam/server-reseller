@@ -92,4 +92,73 @@ router.get('/me', requireAuth, (req: AuthRequest, res: Response) => {
   });
 });
 
+router.put('/profile', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user!;
+    const { name, email, phone } = req.body as { name?: string; email?: string; phone?: string };
+    const nextName = String(name ?? '').trim();
+    const nextEmail = String(email ?? '').trim().toLowerCase();
+    const nextPhone = String(phone ?? '').trim();
+
+    if (!nextName || !nextEmail) {
+      res.status(400).json({ message: 'Name and email are required' });
+      return;
+    }
+
+    const emailTaken = await User.findOne({
+      email: nextEmail,
+      _id: { $ne: user._id },
+    }).select('_id');
+    if (emailTaken) {
+      res.status(409).json({ message: 'Email already in use' });
+      return;
+    }
+
+    user.name = nextName;
+    user.email = nextEmail;
+    user.phone = nextPhone;
+    await user.save();
+
+    res.json({
+      user: publicUserFields(user),
+      limits: limitsPayload(user),
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Could not update profile' });
+  }
+});
+
+router.put('/password', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user!;
+    const { currentPassword, newPassword } = req.body as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ message: 'Current and new password are required' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      res.status(400).json({ message: 'New password must be at least 6 characters' });
+      return;
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) {
+      res.status(401).json({ message: 'Current password is incorrect' });
+      return;
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Could not update password' });
+  }
+});
+
 export default router;

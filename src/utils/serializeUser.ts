@@ -12,6 +12,7 @@ export function publicUserFields(user: IUser) {
     id: user.id,
     email: user.email,
     name: user.name,
+    phone: user.phone || '',
     role: user.role,
     listingImagePackPurchased: Boolean(user.listingImagePackPurchased),
     featuredTokens: user.featuredTokens ?? 0,
