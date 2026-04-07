@@ -27,6 +27,10 @@ export async function optionalAuth(req: AuthRequest, _res: Response, next: NextF
 }
 
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!process.env.CLERK_SECRET_KEY?.trim() || !process.env.CLERK_PUBLISHABLE_KEY?.trim()) {
+    res.status(500).json({ message: 'Auth is not configured on server' });
+    return;
+  }
   const auth = getAuth(req);
   const clerkUserId = auth.userId || null;
   if (!clerkUserId) {

@@ -17,6 +17,9 @@ const app = express();
 // Correct client IP / secure cookies when behind Render / Cloudflare
 app.set("trust proxy", 1);
 
+const clerkSecretKey = process.env.CLERK_SECRET_KEY?.trim() || "";
+const clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY?.trim() || "";
+
 const VERCEL_PREVIEW_RE = /^https:\/\/client-reseller-[a-z0-9-]+\.vercel\.app$/;
 
 const DEFAULT_CORS_ORIGINS = [
@@ -67,7 +70,18 @@ app.use(
 app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
-app.use(clerkMiddleware());
+if (clerkSecretKey && clerkPublishableKey) {
+  app.use(
+    clerkMiddleware({
+      secretKey: clerkSecretKey,
+      publishableKey: clerkPublishableKey,
+    }),
+  );
+} else {
+  console.warn(
+    "[auth] Clerk keys missing. Set CLERK_SECRET_KEY and CLERK_PUBLISHABLE_KEY in environment.",
+  );
+}
 
 const uploadsPath = path.join(process.cwd(), "uploads");
 app.use("/uploads", express.static(uploadsPath));
