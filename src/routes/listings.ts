@@ -106,10 +106,11 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
 
     const [items, total] = await Promise.all([
       Listing.find(filter)
+        .select('title price currency type status category images featured views contactClicks seller createdAt')
         .sort(sortSpec)
         .skip(skip)
         .limit(lim)
-        .populate('seller', 'name email')
+        .populate('seller', 'name')
         .lean(),
       Listing.countDocuments(filter),
     ]);
@@ -140,6 +141,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
 router.get('/mine', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const listings = await Listing.find({ seller: req.userId })
+      .select('title price currency type status category images featured views contactClicks seller createdAt')
       .sort({ createdAt: -1 })
       .lean();
     res.json({

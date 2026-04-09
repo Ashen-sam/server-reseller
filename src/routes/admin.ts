@@ -173,6 +173,7 @@ router.get('/listings', requireAdmin, async (req: AuthRequest, res: Response) =>
 
     const [items, total] = await Promise.all([
       listingQuery
+        .select('title price currency type status category images featured views contactClicks seller createdAt')
         .skip(skip)
         .limit(limit)
         .populate('seller', 'name email')
