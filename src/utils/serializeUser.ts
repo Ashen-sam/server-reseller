@@ -13,7 +13,7 @@ export function publicUserFields(user: IUser) {
     email: user.email,
     name: user.name,
     phone: user.phone || '',
-    avatarStyle: user.avatarStyle || 'personas',
+    avatarStyle: user.avatarStyle || 'avataaars',
     role: user.role,
     listingImagePackPurchased: Boolean(user.listingImagePackPurchased),
     featuredTokens: user.featuredTokens ?? 0,
