@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { Listing, LISTING_CATEGORIES, LISTING_CURRENCIES, LISTING_TYPES } from '../models/Listing';
+import { Listing, LISTING_CATEGORIES, LISTING_CURRENCIES, LISTING_TYPES, LISTING_STATUSES } from '../models/Listing';
 import { User } from '../models/User';
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 import { maxImagesPerListingForUser } from '../utils/listingLimits';
@@ -121,6 +121,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
         ...l,
         id: l._id,
         currency: l.currency || 'USD',
+        status: l.status || 'inStock',
         featured: Boolean(l.featured),
         seller: l.seller
           ? { id: (l.seller as { _id: Types.ObjectId })._id, ...(l.seller as object) }
@@ -146,6 +147,7 @@ router.get('/mine', requireAuth, async (req: AuthRequest, res: Response) => {
         ...l,
         id: l._id,
         currency: l.currency || 'USD',
+        status: l.status || 'inStock',
         featured: Boolean(l.featured),
       })),
     });
@@ -204,6 +206,7 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
         ...listing,
         id: listing._id,
         currency: listing.currency || 'USD',
+        status: listing.status || 'inStock',
         featured: Boolean(listing.featured),
         seller: seller
           ? { id: seller._id, name: seller.name, email: seller.email }
@@ -271,6 +274,7 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
       category,
       type: typeRaw,
       currency: currencyRaw,
+      status: statusRaw,
       phone,
       whatsapp,
       email,
@@ -295,6 +299,12 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
       return;
     }
     const priceNum = Number(price);
+    const listingStatus = (statusRaw || 'inStock').trim();
+    if (!LISTING_STATUSES.includes(listingStatus as (typeof LISTING_STATUSES)[number])) {
+      res.status(400).json({ message: 'Invalid listing status' });
+      return;
+    }
+
     if (Number.isNaN(priceNum) || priceNum < 0) {
       res.status(400).json({ message: 'Invalid price' });
       return;
@@ -338,6 +348,7 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
       price: priceNum,
       currency: currency as (typeof LISTING_CURRENCIES)[number],
       type: listingType as (typeof LISTING_TYPES)[number],
+      status: listingStatus as (typeof LISTING_STATUSES)[number],
       category,
       featured,
       images,
@@ -397,6 +408,7 @@ router.put(
 
       const { title, description, price, type: typeRaw, category, currency: currencyRaw, phone, whatsapp, email, keepImages } =
         req.body as Record<string, string>;
+      const statusRaw = req.body.status as string | undefined;
       if (title !== undefined) listing.title = title.trim();
       if (description !== undefined) listing.description = description.trim();
       if (price !== undefined) {
@@ -429,6 +441,14 @@ router.put(
           return;
         }
         listing.currency = c as (typeof LISTING_CURRENCIES)[number];
+      }
+      if (statusRaw !== undefined) {
+        const s = statusRaw.trim();
+        if (!LISTING_STATUSES.includes(s as (typeof LISTING_STATUSES)[number])) {
+          res.status(400).json({ message: 'Invalid listing status' });
+          return;
+        }
+        listing.status = s as (typeof LISTING_STATUSES)[number];
       }
       if (phone !== undefined) listing.contact.phone = phone.trim();
       if (whatsapp !== undefined) listing.contact.whatsapp = whatsapp.trim();

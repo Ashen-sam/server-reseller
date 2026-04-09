@@ -10,6 +10,7 @@ import {
   LISTING_CATEGORIES,
   LISTING_CURRENCIES,
   LISTING_TYPES,
+  LISTING_STATUSES,
 } from '../models/Listing';
 import { requireAdmin, AuthRequest } from '../middleware/auth';
 import { isCloudinaryEnabled, uploadImageBuffer } from '../config/cloudinary';
@@ -185,6 +186,7 @@ router.get('/listings', requireAdmin, async (req: AuthRequest, res: Response) =>
         id: l._id,
         currency: l.currency || 'USD',
         type: l.type || 'product',
+        status: l.status || 'inStock',
         featured: Boolean(l.featured),
         seller: l.seller
           ? { id: (l.seller as { _id: Types.ObjectId })._id, ...(l.seller as object) }
@@ -209,6 +211,7 @@ router.post('/listings', requireAdmin, upload.array('images', 10), async (req: A
       price,
       category,
       type: typeRaw,
+      status: statusRaw,
       currency: currencyRaw,
       phone,
       whatsapp,
@@ -240,6 +243,12 @@ router.post('/listings', requireAdmin, upload.array('images', 10), async (req: A
       return;
     }
     const currency = (currencyRaw || 'USD').toUpperCase();
+    const listingStatus = (statusRaw || 'inStock').trim();
+    if (!LISTING_STATUSES.includes(listingStatus as (typeof LISTING_STATUSES)[number])) {
+      res.status(400).json({ message: 'Invalid listing status' });
+      return;
+    }
+
     if (!LISTING_CURRENCIES.includes(currency as (typeof LISTING_CURRENCIES)[number])) {
       res.status(400).json({ message: 'Invalid currency' });
       return;
@@ -260,6 +269,7 @@ router.post('/listings', requireAdmin, upload.array('images', 10), async (req: A
       price: priceNum,
       currency: currency as (typeof LISTING_CURRENCIES)[number],
       type: listingType as (typeof LISTING_TYPES)[number],
+      status: listingStatus as (typeof LISTING_STATUSES)[number],
       category,
       featured,
       images,

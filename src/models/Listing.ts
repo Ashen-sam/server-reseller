@@ -11,10 +11,12 @@ export const LISTING_CATEGORIES = [
 
 export const LISTING_CURRENCIES = ['USD', 'LKR', 'EUR', 'GBP', 'INR', 'AUD'] as const;
 export const LISTING_TYPES = ['product', 'service'] as const;
+export const LISTING_STATUSES = ['inStock', 'outOfStock', 'sold'] as const;
 
 export type ListingCategory = (typeof LISTING_CATEGORIES)[number];
 export type ListingCurrency = (typeof LISTING_CURRENCIES)[number];
 export type ListingType = (typeof LISTING_TYPES)[number];
+export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
 export interface IListing extends Document {
   title: string;
@@ -22,6 +24,7 @@ export interface IListing extends Document {
   price: number;
   currency: ListingCurrency;
   type: ListingType;
+  status: ListingStatus;
   category: ListingCategory;
   images: string[];
   featured: boolean;
@@ -51,6 +54,11 @@ const listingSchema = new Schema<IListing>(
       type: String,
       enum: LISTING_TYPES,
       default: 'product',
+    },
+    status: {
+      type: String,
+      enum: LISTING_STATUSES,
+      default: 'inStock',
     },
     category: {
       type: String,
