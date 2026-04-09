@@ -5,6 +5,7 @@ import { signToken, cookieName, cookieOptions, cookieClearOptions } from '../uti
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { limitsPayload, publicUserFields } from '../utils/serializeUser';
 import { DEFAULT_ADMIN_EMAIL } from '../utils/seedDefaultAdmin';
+import { AVATAR_STYLES } from '../constants/avatarStyles';
 
 const router = Router();
 
@@ -100,7 +101,12 @@ router.get('/me', requireAuth, (req: AuthRequest, res: Response) => {
 router.put('/profile', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
-    const { name, email, phone } = req.body as { name?: string; email?: string; phone?: string };
+    const { name, email, phone, avatarStyle } = req.body as {
+      name?: string;
+      email?: string;
+      phone?: string;
+      avatarStyle?: string;
+    };
     const nextName = String(name ?? '').trim();
     const nextEmail = String(email ?? '').trim().toLowerCase();
     const nextPhone = String(phone ?? '').trim();
@@ -122,6 +128,13 @@ router.put('/profile', requireAuth, async (req: AuthRequest, res: Response) => {
     user.name = nextName;
     user.email = nextEmail;
     user.phone = nextPhone;
+    if (avatarStyle !== undefined) {
+      if (!AVATAR_STYLES.includes(avatarStyle as (typeof AVATAR_STYLES)[number])) {
+        res.status(400).json({ message: 'Invalid avatar style' });
+        return;
+      }
+      user.avatarStyle = avatarStyle as (typeof AVATAR_STYLES)[number];
+    }
     await user.save();
 
     res.json({

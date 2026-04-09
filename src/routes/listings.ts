@@ -110,7 +110,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
         .sort(sortSpec)
         .skip(skip)
         .limit(lim)
-        .populate('seller', 'name')
+        .populate('seller', 'name avatarStyle')
         .lean(),
       Listing.countDocuments(filter),
     ]);
@@ -273,12 +273,12 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const listing = await Listing.findById(id).populate('seller', 'name email').lean();
+    const listing = await Listing.findById(id).populate('seller', 'name email avatarStyle').lean();
     if (!listing) {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const seller = listing.seller as { _id: Types.ObjectId; name?: string; email?: string } | null;
+    const seller = listing.seller as { _id: Types.ObjectId; name?: string; email?: string; avatarStyle?: string } | null;
     res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=180');
     res.json({
       listing: {
@@ -288,7 +288,7 @@ router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
         status: listing.status || 'inStock',
         featured: Boolean(listing.featured),
         seller: seller
-          ? { id: seller._id, name: seller.name, email: seller.email }
+          ? { id: seller._id, name: seller.name, email: seller.email, avatarStyle: seller.avatarStyle }
           : null,
       },
     });
@@ -438,7 +438,7 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
       },
       seller: req.userId,
     });
-    const populated = await Listing.findById(listing._id).populate('seller', 'name email').lean();
+    const populated = await Listing.findById(listing._id).populate('seller', 'name email avatarStyle').lean();
     res.status(201).json({
       listing: {
         ...populated!,
@@ -569,7 +569,7 @@ router.put(
       }
 
       await listing.save();
-      const populated = await Listing.findById(listing._id).populate('seller', 'name email').lean();
+      const populated = await Listing.findById(listing._id).populate('seller', 'name email avatarStyle').lean();
       res.json({
         listing: {
           ...populated!,

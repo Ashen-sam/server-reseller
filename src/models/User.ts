@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { AVATAR_STYLES, type AvatarStyle } from '../constants/avatarStyles';
 
 export type UserRole = 'user' | 'admin';
 
@@ -7,6 +8,7 @@ export interface IUser extends Document {
   passwordHash: string;
   name: string;
   phone?: string;
+  avatarStyle: AvatarStyle;
   role: UserRole;
   /** One-time unlock: more images per listing (see billing constants). */
   listingImagePackPurchased: boolean;
@@ -21,6 +23,7 @@ const userSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true },
     name: { type: String, required: true, trim: true },
     phone: { type: String, trim: true, default: '' },
+    avatarStyle: { type: String, enum: AVATAR_STYLES, default: 'adventurer' },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     listingImagePackPurchased: { type: Boolean, default: false },
     featuredTokens: { type: Number, default: 0 },

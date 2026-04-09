@@ -176,7 +176,7 @@ router.get('/listings', requireAdmin, async (req: AuthRequest, res: Response) =>
         .select('title price currency type status category images featured views contactClicks seller createdAt')
         .skip(skip)
         .limit(limit)
-        .populate('seller', 'name email')
+        .populate('seller', 'name email avatarStyle')
         .lean(),
       Listing.countDocuments(),
     ]);
@@ -282,7 +282,7 @@ router.post('/listings', requireAdmin, upload.array('images', 10), async (req: A
       seller: sellerId,
     });
 
-    const populated = await Listing.findById(listing._id).populate('seller', 'name email').lean();
+    const populated = await Listing.findById(listing._id).populate('seller', 'name email avatarStyle').lean();
     res.status(201).json({
       listing: {
         ...populated!,
