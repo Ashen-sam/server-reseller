@@ -44,3 +44,13 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
     res.status(401).json({ message: 'Invalid token' });
   }
 }
+
+export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  requireAuth(req, res, () => {
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ message: 'Admin access required' });
+      return;
+    }
+    next();
+  });
+}

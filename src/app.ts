@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth";
 import listingRoutes from "./routes/listings";
 import billingRoutes from "./routes/billing";
 import metaRoutes from "./routes/meta";
+import adminRoutes from "./routes/admin";
 
 const app = express();
 // Correct client IP / secure cookies when behind Render / Cloudflare
@@ -87,6 +88,7 @@ app.use("/api", apiLimiter);
 app.use("/api/auth", authLimiter);
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api", metaRoutes);

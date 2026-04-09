@@ -4,6 +4,7 @@ import { User } from '../models/User';
 import { signToken, cookieName, cookieOptions, cookieClearOptions } from '../utils/jwt';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { limitsPayload, publicUserFields } from '../utils/serializeUser';
+import { DEFAULT_ADMIN_EMAIL } from '../utils/seedDefaultAdmin';
 
 const router = Router();
 
@@ -26,6 +27,10 @@ router.post('/register', async (req, res: Response) => {
     };
     if (!email || !password || !name) {
       res.status(400).json({ message: 'Email, password, and name are required' });
+      return;
+    }
+    if (email.toLowerCase() === DEFAULT_ADMIN_EMAIL) {
+      res.status(403).json({ message: 'This email is reserved for the system administrator account' });
       return;
     }
     const existing = await User.findOne({ email: email.toLowerCase() });
