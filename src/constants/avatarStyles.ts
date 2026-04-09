@@ -1,9 +1,9 @@
 export const AVATAR_STYLES = [
-  'adventurer',
-  'avataaars',
-  'bottts',
+  'personas',
+  'initials',
+  'micah',
   'identicon',
-  'lorelei',
+  'shapes',
 ] as const;
 
 export type AvatarStyle = (typeof AVATAR_STYLES)[number];

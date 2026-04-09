@@ -23,7 +23,7 @@ const userSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true },
     name: { type: String, required: true, trim: true },
     phone: { type: String, trim: true, default: '' },
-    avatarStyle: { type: String, enum: AVATAR_STYLES, default: 'adventurer' },
+    avatarStyle: { type: String, enum: AVATAR_STYLES, default: 'personas' },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     listingImagePackPurchased: { type: Boolean, default: false },
     featuredTokens: { type: Number, default: 0 },
