@@ -15,6 +15,7 @@ import {
 import { requireAdmin, AuthRequest } from '../middleware/auth';
 import { isCloudinaryEnabled, uploadImageBuffer } from '../config/cloudinary';
 import { DEFAULT_ADMIN_EMAIL } from '../utils/seedDefaultAdmin';
+import { PAID_MAX_IMAGES_PER_LISTING } from '../constants/billing';
 
 const router = Router();
 
@@ -203,7 +204,7 @@ router.get('/listings', requireAdmin, async (req: AuthRequest, res: Response) =>
   }
 });
 
-router.post('/listings', requireAdmin, upload.array('images', 10), async (req: AuthRequest, res: Response) => {
+router.post('/listings', requireAdmin, upload.array('images', PAID_MAX_IMAGES_PER_LISTING), async (req: AuthRequest, res: Response) => {
   try {
     const {
       sellerId,

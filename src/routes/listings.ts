@@ -6,6 +6,7 @@ import { Listing, LISTING_CATEGORIES, LISTING_CURRENCIES, LISTING_TYPES, LISTING
 import { User } from '../models/User';
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 import { maxImagesPerListingForUser } from '../utils/listingLimits';
+import { PAID_MAX_IMAGES_PER_LISTING } from '../constants/billing';
 import { Types } from 'mongoose';
 import { isCloudinaryEnabled, uploadImageBuffer } from '../config/cloudinary';
 
@@ -23,7 +24,7 @@ const uploadsDir = path.join(process.cwd(), 'uploads');
 /** Always memory storage so `buffer` is set; avoids multer disk issues on some hosts (e.g. Render). */
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { files: 10, fileSize: 5 * 1024 * 1024 },
+  limits: { files: PAID_MAX_IMAGES_PER_LISTING, fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ok = /^image\/(jpeg|png|gif|webp)$/i.test(file.mimetype);
     cb(null, ok);
@@ -344,7 +345,7 @@ router.post('/:id/contact-click', async (req, res: Response) => {
   }
 });
 
-router.post('/', requireAuth, upload.array('images', 10), async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, upload.array('images', PAID_MAX_IMAGES_PER_LISTING), async (req: AuthRequest, res: Response) => {
   try {
     const {
       title,
@@ -399,7 +400,7 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
     const fileCount = files?.length ?? 0;
     if (fileCount > maxImg) {
       res.status(400).json({
-        message: `You can upload up to ${maxImg} images. Purchase the photo pack for up to 10 photos per product.`,
+        message: `You can upload up to ${maxImg} images. Purchase the photo pack for up to ${PAID_MAX_IMAGES_PER_LISTING} photos per product.`,
         maxImagesPerListing: maxImg,
       });
       return;
@@ -464,7 +465,7 @@ router.post('/', requireAuth, upload.array('images', 10), async (req: AuthReques
 router.put(
   '/:id',
   requireAuth,
-  upload.array('images', 10),
+  upload.array('images', PAID_MAX_IMAGES_PER_LISTING),
   async (req: AuthRequest, res: Response) => {
     try {
       const id = paramId(req);

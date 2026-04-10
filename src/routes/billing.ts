@@ -45,9 +45,9 @@ router.post('/purchase', requireAuth, async (req: AuthRequest, res: Response) =>
     }
 
     const id = productId as BillingProductId;
-    if (id === 'image_pack_10') {
+    if (id === 'image_pack_8') {
       if (user.listingImagePackPurchased) {
-        res.status(400).json({ message: 'You already have the 10-photo pack.' });
+        res.status(400).json({ message: 'You already have the photo pack.' });
         return;
       }
       user.listingImagePackPurchased = true;
