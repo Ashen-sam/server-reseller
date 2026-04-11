@@ -19,6 +19,9 @@ function paramId(req: { params: { id?: string | string[] } }): string {
 
 const useCloudinary = isCloudinaryEnabled();
 
+/** Fewer image URLs in marketplace JSON = faster TTFB and smaller downloads (detail page loads all). */
+const LIST_GRID_MAX_IMAGES = 3;
+
 const uploadsDir = path.join(process.cwd(), 'uploads');
 
 /** Always memory storage so `buffer` is set; avoids multer disk issues on some hosts (e.g. Render). */
@@ -116,19 +119,29 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
       Listing.countDocuments(filter),
     ]);
 
-    // Small shared-cache TTL helps initial page load under traffic bursts.
-    res.set('Cache-Control', 'public, max-age=20, s-maxage=30, stale-while-revalidate=60');
+    // Browsers and edge CDNs can reuse responses; short TTL keeps data fresh enough for a marketplace.
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
     res.json({
-      listings: items.map((l) => ({
-        ...l,
-        id: l._id,
-        currency: l.currency || 'USD',
-        status: l.status || 'inStock',
-        featured: Boolean(l.featured),
-        seller: l.seller
-          ? { id: (l.seller as { _id: Types.ObjectId })._id, ...(l.seller as object) }
-          : l.seller,
-      })),
+      listings: items.map((l) => {
+        const rawImages = Array.isArray(l.images) ? l.images : [];
+        const imageCount = rawImages.length;
+        const images =
+          imageCount <= LIST_GRID_MAX_IMAGES
+            ? rawImages
+            : rawImages.slice(0, LIST_GRID_MAX_IMAGES);
+        return {
+          ...l,
+          images,
+          imageCount,
+          id: l._id,
+          currency: l.currency || 'USD',
+          status: l.status || 'inStock',
+          featured: Boolean(l.featured),
+          seller: l.seller
+            ? { id: (l.seller as { _id: Types.ObjectId })._id, ...(l.seller as object) }
+            : l.seller,
+        };
+      }),
       total,
       page: p,
       pages: Math.ceil(total / lim) || 1,
