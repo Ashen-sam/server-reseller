@@ -5,7 +5,10 @@ export type UserRole = 'user' | 'admin';
 
 export interface IUser extends Document {
   email: string;
+  /** Empty for Clerk-only accounts; set for legacy email/password users. */
   passwordHash: string;
+  /** Clerk user id (`sub` in session JWT) when using Clerk. */
+  clerkUserId?: string;
   name: string;
   phone?: string;
   avatarStyle: AvatarStyle;
@@ -20,7 +23,8 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, default: '' },
+    clerkUserId: { type: String, unique: true, sparse: true, trim: true },
     name: { type: String, required: true, trim: true },
     phone: { type: String, trim: true, default: '' },
     avatarStyle: { type: String, enum: AVATAR_STYLES, default: 'avataaars' },

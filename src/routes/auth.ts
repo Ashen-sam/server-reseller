@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { getAuth } from '@clerk/express';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/User';
 import { signToken, cookieName, cookieOptions, cookieClearOptions } from '../utils/jwt';
@@ -6,6 +7,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { limitsPayload, publicUserFields } from '../utils/serializeUser';
 import { DEFAULT_ADMIN_EMAIL } from '../utils/seedDefaultAdmin';
 import { AVATAR_STYLES } from '../constants/avatarStyles';
+import { isClerkEnabled } from '../config/clerk';
 
 const router = Router();
 
@@ -20,6 +22,10 @@ function adminEmails(): Set<string> {
 }
 
 router.post('/register', async (req, res: Response) => {
+  if (isClerkEnabled()) {
+    res.status(410).json({ message: 'Sign up is handled in the app (Clerk).' });
+    return;
+  }
   try {
     const { email, password, name } = req.body as {
       email?: string;
@@ -61,6 +67,10 @@ router.post('/register', async (req, res: Response) => {
 });
 
 router.post('/login', async (req, res: Response) => {
+  if (isClerkEnabled()) {
+    res.status(410).json({ message: 'Sign in is handled in the app (Clerk).' });
+    return;
+  }
   try {
     const { email, password } = req.body as { email?: string; password?: string };
     if (!email || !password) {
@@ -90,6 +100,38 @@ router.post('/logout', (_req, res: Response) => {
   res.json({ ok: true });
 });
 
+/**
+ * Dev helper: see whether the API receives a Clerk JWT and whether `getAuth` accepts it.
+ * Open: GET http://localhost:4000/api/auth/clerk-debug (with the same Authorization header the SPA sends, or none).
+ */
+router.get('/clerk-debug', (req, res: Response) => {
+  const allow =
+    process.env.NODE_ENV !== 'production' || process.env.CLERK_DEBUG === '1';
+  if (!allow) {
+    res.status(404).end();
+    return;
+  }
+  if (!isClerkEnabled()) {
+    res.json({ clerkEnabled: false });
+    return;
+  }
+  const { userId, sessionId } = getAuth(req);
+  const authz = req.headers.authorization || '';
+  const hasBearer = /^Bearer\s+\S+/i.test(authz);
+  res.json({
+    clerkEnabled: true,
+    hasPublishableKey: Boolean(process.env.CLERK_PUBLISHABLE_KEY?.trim()),
+    hasBearer,
+    clerkUserId: userId ?? null,
+    sessionId: sessionId ?? null,
+    hint: !hasBearer
+      ? 'Browser did not send Authorization — Clerk getToken() is empty (often because Clerk Frontend API requests are blocked).'
+      : !userId
+        ? 'Bearer sent but not accepted — CLERK_SECRET_KEY must be from the same Clerk application as VITE_CLERK_PUBLISHABLE_KEY.'
+        : 'Clerk session OK — if /me still fails, the problem is MongoDB or user sync.',
+  });
+});
+
 router.get('/me', requireAuth, (req: AuthRequest, res: Response) => {
   const u = req.user!;
   res.json({
@@ -113,6 +155,11 @@ router.put('/profile', requireAuth, async (req: AuthRequest, res: Response) => {
 
     if (!nextName || !nextEmail) {
       res.status(400).json({ message: 'Name and email are required' });
+      return;
+    }
+
+    if (user.clerkUserId && nextEmail !== user.email) {
+      res.status(400).json({ message: 'Email is managed in your Clerk account.' });
       return;
     }
 
@@ -150,6 +197,10 @@ router.put('/profile', requireAuth, async (req: AuthRequest, res: Response) => {
 router.put('/password', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
+    if (user.clerkUserId || !user.passwordHash) {
+      res.status(400).json({ message: 'Password is managed in your Clerk account.' });
+      return;
+    }
     const { currentPassword, newPassword } = req.body as {
       currentPassword?: string;
       newPassword?: string;

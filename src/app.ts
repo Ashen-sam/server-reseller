@@ -7,6 +7,8 @@ import helmet from "helmet";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import path from "path";
+import { clerkMiddleware } from "@clerk/express";
+import { isClerkEnabled } from "./config/clerk";
 import authRoutes from "./routes/auth";
 import listingRoutes from "./routes/listings";
 import billingRoutes from "./routes/billing";
@@ -59,14 +61,26 @@ app.use(
   }),
 );
 
+app.use(cookieParser());
+app.use(express.json({ limit: "2mb" }));
+
+// After cookies/body so Clerk can read session cookies; must run before protected routes.
+if (isClerkEnabled()) {
+  const pk = process.env.CLERK_PUBLISHABLE_KEY?.trim();
+  const sk = process.env.CLERK_SECRET_KEY?.trim();
+  if (pk && sk) {
+    app.use(clerkMiddleware({ publishableKey: pk, secretKey: sk }));
+  } else {
+    app.use(clerkMiddleware());
+  }
+}
+
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
 app.use(compression());
-app.use(cookieParser());
-app.use(express.json({ limit: "2mb" }));
 
 const uploadsPath = path.join(process.cwd(), "uploads");
 app.use("/uploads", express.static(uploadsPath));

@@ -15,6 +15,7 @@ import {
 import { requireAdmin, AuthRequest } from '../middleware/auth';
 import { isCloudinaryEnabled, uploadImageBuffer } from '../config/cloudinary';
 import { DEFAULT_ADMIN_EMAIL } from '../utils/seedDefaultAdmin';
+import { isClerkEnabled } from '../config/clerk';
 import { PAID_MAX_IMAGES_PER_LISTING } from '../constants/billing';
 
 const router = Router();
@@ -112,6 +113,12 @@ router.get('/users', requireAdmin, async (req: AuthRequest, res: Response) => {
 
 router.post('/users', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
+    if (isClerkEnabled()) {
+      res.status(400).json({
+        message: 'Creating password users is disabled while Clerk is enabled. Invite users in the Clerk dashboard.',
+      });
+      return;
+    }
     const { name, email, password } = req.body as {
       name?: string;
       email?: string;

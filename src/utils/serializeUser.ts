@@ -13,6 +13,7 @@ export function publicUserFields(user: IUser) {
     id: user.id,
     email: user.email,
     name: user.name,
+    clerkLinked: Boolean(user.clerkUserId),
     phone: user.phone || '',
     avatarStyle: user.avatarStyle || 'avataaars',
     role: user.role,
